@@ -1,0 +1,454 @@
+html
+
+
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Financije</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .balance {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .balance h2 {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .balance .amount {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .summary {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .summary div {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .income { background: #d4edda; color: #155724; }
+        .expense { background: #f8d7da; color: #721c24; }
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section h3 { margin-top: 0; color: #333; }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #5a6fd6; }
+        .btn-expense { background: #dc3545; }
+        .btn-expense:hover { background: #c82333; }
+        .btn-scan {
+            background: #28a745;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+        .btn-scan:hover { background: #218838; }
+        .transactions {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .transactions h3 {
+            padding: 15px 20px;
+            margin: 0;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        .transaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .transaction:last-child { border-bottom: none; }
+        .transaction .info { flex: 1; }
+        .transaction .category { font-size: 12px; color: #666; }
+        .transaction .amount { font-weight: bold; }
+        .transaction .amount.positive { color: #28a745; }
+        .transaction .amount.negative { color: #dc3545; }
+        .transaction .delete {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+            width: auto;
+            margin: 0;
+        }
+        .transaction .delete:hover { color: #dc3545; }
+        .empty { padding: 30px; text-align: center; color: #999; }
+        /* Modal za pregled skenirane slike */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .scanning-overlay {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        .scanning-overlay .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-field {
+            margin-bottom: 10px;
+        }
+        .result-field label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .modal-buttons button {
+            margin: 0;
+        }
+        .btn-cancel {
+            background: #6c757d;
+        }
+        .btn-cancel:hover { background: #5a6268; }
+    </style>
+</head>
+<body>
+    <h1>💰 Moje Financije</h1>
+    <div class="balance">
+        <h2>TRENUTNO STANJE</h2>
+        <div class="amount" id="balance">0,00 €</div>
+    </div>
+    <div class="summary">
+        <div class="income">
+            <strong>Prihodi</strong>
+            <div id="total-income">0,00 €</div>
+        </div>
+        <div class="expense">
+            <strong>Rashodi</strong>
+            <div id="total-expense">0,00 €</div>
+        </div>
+    </div>
+    <div class="form-section">
+        <h3>📷 Skeniraj račun</h3>
+        <button class="btn-scan" onclick="document.getElementById('camera-input').click()">
+            📷 Fotografiraj račun
+        </button>
+        <input type="file" id="camera-input" accept="image/*" capture="environment"
+               style="display:none" onchange="scanReceipt(event)">
+    </div>
+    <div class="form-section">
+        <h3>Ručni unos</h3>
+        <input type="text" id="description" placeholder="Opis (npr. Plaća, Kaufland...)">
+        <input type="number" id="amount" placeholder="Iznos" step="0.01">
+        <select id="category">
+            <option value="Plaća">💼 Plaća</option>
+            <option value="Hrana">🛒 Hrana</option>
+            <option value="Režije">🏠 Režije</option>
+            <option value="Prijevoz">🚗 Prijevoz</option>
+            <option value="Zabava">🎬 Zabava</option>
+            <option value="Zdravlje">💊 Zdravlje</option>
+            <option value="Ostalo">📦 Ostalo</option>
+        </select>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="addTransaction('income')">+ Prihod</button>
+            <button class="btn-expense" onclick="addTransaction('expense')">− Rashod</button>
+        </div>
+    </div>
+    <div class="transactions">
+        <h3>📋 Transakcije</h3>
+        <div id="transaction-list">
+            <div class="empty">Nema transakcija. Dodaj prvu!</div>
+        </div>
+    </div>
+    <!-- Modal za potvrdu skeniranog računa -->
+    <div class="modal" id="scan-modal">
+        <div class="modal-content">
+            <h3>🧾 Skenirani račun</h3>
+            <img id="preview-image" src="" alt="Račun">
+            <div id="scan-result">
+                <div class="scanning-overlay">
+                    <div class="spinner"></div>
+                    <p>AI analizira račun...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ⚠️ UPIŠI SVOJ API KLJUČ OVDJE
+        const OPENAI_API_KEY = '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';
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        updateUI();
+        async function scanReceipt(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            // Prikaži modal s pregledom slike
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageData = e.target.result;
+                document.getElementById('preview-image').src = imageData;
+                document.getElementById('scan-result').innerHTML = `
+                    <div class="scanning-overlay">
+                        <div class="spinner"></div>
+                        <p>AI analizira račun...</p>
+                    </div>
+                `;
+                document.getElementById('scan-modal').classList.add('active');
+                try {
+                    const result = await analyzeReceipt(imageData);
+                    showScanResult(result);
+                } catch (err) {
+                    document.getElementById('scan-result').innerHTML = `
+                        <p style="color:red">Greška pri analizi: ${err.message}</p>
+                        <button class="btn-cancel" onclick="closeModal()">Zatvori</button>
+                    `;
+                }
+            };
+            reader.readAsDataURL(file);
+            // Resetiraj input da može slikati isti račun opet
+            event.target.value = '';
+        }
+        async function analyzeReceipt(imageBase64) {
+            const base64 = imageBase64.split(',')[1];
+            const response = await fetch('[api.openai.com](https://api.openai.com/v1/chat/completions)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: `Analiziraj ovaj račun i vrati SAMO JSON u ovom formatu, bez ikakvog dodatnog teksta:
+{
+  "description": "naziv trgovine ili opis",
+  "amount": 12.50,
+  "category": "Hrana",
+  "date": "13.06.2026"
+}
+Kategorija mora biti jedna od: Hrana, Režije, Prijevoz, Zabava, Zdravlje, Ostalo.
+Iznos mora biti ukupni iznos za platiti (broj bez valute).
+Ako ne možeš pročitati račun, vrati amount: 0.`
+                            },
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:image/jpeg;base64,${base64}`,
+                                    detail: 'high'
+                                }
+                            }
+                        ]
+                    }],
+                    max_tokens: 200
+                })
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || 'API greška');
+            }
+            const data = await response.json();
+            const text = data.choices[0].message.content.trim();
+            // Parsaj JSON iz odgovora
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Nije moguće pročitati odgovor AI-a');
+            return JSON.parse(jsonMatch[0]);
+        }
+        function showScanResult(result) {
+            document.getElementById('scan-result').innerHTML = `
+                <div class="result-field">
+                    <label>Opis</label>
+                    <input type="text" id="scan-description" value="${result.description || ''}">
+                </div>
+                <div class="result-field">
+                    <label>Iznos (€)</label>
+                    <input type="number" id="scan-amount" value="${result.amount || ''}" step="0.01">
+                </div>
+                <div class="result-field">
+                    <label>Kategorija</label>
+                    <select id="scan-category">
+                        <option ${result.category === 'Hrana' ? 'selected' : ''}>🛒 Hrana</option>
+                        <option ${result.category === 'Režije' ? 'selected' : ''}>🏠 Režije</option>
+                        <option ${result.category === 'Prijevoz' ? 'selected' : ''}>🚗 Prijevoz</option>
+                        <option ${result.category === 'Zabava' ? 'selected' : ''}>🎬 Zabava</option>
+                        <option ${result.category === 'Zdravlje' ? 'selected' : ''}>💊 Zdravlje</option>
+                        <option ${result.category === 'Ostalo' ? 'selected' : ''}>📦 Ostalo</option>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="confirmScan()">✅ Dodaj rashod</button>
+                    <button class="btn-cancel" onclick="closeModal()">Odustani</button>
+                </div>
+            `;
+        }
+        function confirmScan() {
+            const description = document.getElementById('scan-description').value.trim();
+            const amount = parseFloat(document.getElementById('scan-amount').value);
+            const categoryRaw = document.getElementById('scan-category').value;
+            const category = categoryRaw.replace(/^[^\s]+\s/, ''); // ukloni emoji
+            if (!description || !amount || amount <= 0) {
+                alert('Molim provjeri opis i iznos!');
+                return;
+            }
+            const transaction = {
+                id: Date.now(),
+                description,
+                amount: -amount, // račun = rashod
+                category: categoryRaw,
+                date: new Date().toLocaleDateString('hr-HR')
+            };
+            transactions.unshift(transaction);
+            saveAndUpdate();
+            closeModal();
+        }
+        function closeModal() {
+            document.getElementById('scan-modal').classList.remove('active');
+        }
+        function addTransaction(type) {
+            const description = document.getElementById('description').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            if (!description || !amount || amount <= 0) {
+                alert('Molim unesi opis i ispravan iznos!');
+                return;
+            }
+            const transaction = {
+                id: Date.now(),
+                description,
+                amount: type === 'expense' ? -amount : amount,
+                category,
+                date: new Date().toLocaleDateString('hr-HR')
+            };
+            transactions.unshift(transaction);
+            saveAndUpdate();
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+        }
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveAndUpdate();
+        }
+        function saveAndUpdate() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            updateUI();
+        }
+        function updateUI() {
+            const income = transactions
+                .filter(t => t.amount > 0)
+                .reduce((sum, t) => sum + t.amount, 0);
+            const expense = transactions
+                .filter(t => t.amount < 0)
+                .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+            const balance = income - expense;
+            document.getElementById('balance').textContent = formatMoney(balance);
+            document.getElementById('total-income').textContent = formatMoney(income);
+            document.getElementById('total-expense').textContent = formatMoney(expense);
+            const list = document.getElementById('transaction-list');
+            if (transactions.length === 0) {
+                list.innerHTML = '<div class="empty">Nema transakcija. Dodaj prvu!</div>';
+                return;
+            }
+            list.innerHTML = transactions.map(t => `
+                <div class="transaction">
+                    <div class="info">
+                        <div>${t.description}</div>
+                        <div class="category">${t.category} • ${t.date}</div>
+                    </div>
+                    <div class="amount ${t.amount > 0 ? 'positive' : 'negative'}">
+                        ${t.amount > 0 ? '+' : ''}${formatMoney(t.amount)}
+                    </div>
+                    <button class="delete" onclick="deleteTransaction(${t.id})">✕</button>
+                </div>
+            `).join('');
+        }
+        function formatMoney(amount) {
+            return amount.toLocaleString('hr-HR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' €';
+        }
+    </script>
+</body>
+</html>
